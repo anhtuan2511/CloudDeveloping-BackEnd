@@ -16,11 +16,24 @@ const stripe = require('stripe')(stripe_key)
 app.use(express.json())
 app.use(bodyParser.json())
 
-app.use(
-    cors({
-        origin:"http://localhost:5173"
-    })
-)
+// app.use(
+//     cors({
+//         origin:"http://localhost:5173"
+//     })
+// )
+
+var whitelist = ['http://clouddev-subscription-frontend.s3-website-us-east-1.amazonaws.com'];
+var corsOptions = function (req, callback) {
+   var corsOptions;
+   if (whitelist.indexOf(req.header('Origin')) !== -1) {
+       corsOptions = { origin: true }; // reflect (enable) the requested origin in the CORS response
+   } else {
+       corsOptions = { origin: false }; // disable CORS for this request
+   }
+   callback(null, corsOptions); // callback expects two parameters: error and options
+};
+
+app.use(cors(corsOptions));
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
@@ -46,8 +59,8 @@ const stripeSession = async(plan) => {
                     quantity: 1
                 },
             ],
-            success_url: "http://localhost:5173/success",
-            cancel_url: "http://localhost:5173/pricing"
+            success_url: "http://clouddev-subscription-frontend.s3-website-us-east-1.amazonaws.com/success",
+            cancel_url: "http://clouddev-subscription-frontend.s3-website-us-east-1.amazonaws.com/failed"
         });
         return session;
     }catch (e){
