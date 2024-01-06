@@ -74,18 +74,26 @@ app.post("/api/v1/create-subscription-checkout-session", async(req, res) => {
     if(plan == 50) planId = monthly;
     else if(plan == 480) planId = annually;
 
-    try{
+     try {
+    const session = await stripeSession(planId);
+    const user = await admin.auth().getUser(customerId);
+    const userRef = admin.database().ref("users").child(user.uid);
 
-        const session = await stripeSession(planId);
-        const user = await admin.auth().getUser(customerId);
+    // Check if the "subscription" node exists
+    const snapshot = await userRef.child("subscription").once("value");
 
-        await admin.database().ref("users").child(user.uid).update({
-            subscription: {
-                sessionId: session.id
-            }
-        });
-        console.log(session)
-        return res.json({session})
+    if (snapshot.exists()) {
+      await userRef.child("subscription").update({
+        sessionId: session.id,
+      });
+    } else {
+      await userRef.child("subscription").set({
+        sessionId: session.id,
+      });
+    }
+
+    console.log(session);
+    return res.json({ session });
 
     }catch(error){
         res.send(error)
